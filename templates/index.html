@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>📚 Book Availability Monitor</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #90caf9;
+        }
+
+        input,
+        button {
+            font-size: 16px;
+            padding: 6px;
+            margin: 4px 0;
+            border: none;
+            border-radius: 4px;
+        }
+
+        input {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #444;
+        }
+
+        button {
+            background-color: #1976d2;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #1565c0;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: #1e1e1e;
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        a {
+            color: #64b5f6;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .btn-remove {
+            background-color: #d32f2f;
+            margin-right: 10px;
+        }
+
+        .btn-remove:hover {
+            background-color: #b71c1c;
+        }
+
+        form {
+            display: inline;
+        }
+
+        .status {
+            font-size: 14px;
+            margin-top: 5px;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>📚 Book Availability Monitor</h1>
+
+    <form method="post" action="/add">
+        <input name="book_name" placeholder="Book name in Hebrew" required>
+        <button type="submit">Add Book</button>
+    </form>
+
+    <ul>
+        {% for name, data in books.items() %}
+        <li>
+            <b>{{ name }}</b><br>
+            {% if data.selected_url %}
+
+            📎 <a href="{{ data.selected_url }}" target="_blank">{{ data.selected_url }}</a><br>
+
+            📦 Availability:
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                {% for fmt in data.available_formats %}
+                <li>
+                    {% if fmt.type == "מודפס" %}
+                    📘 מודפס:
+                    {% elif fmt.type == "דיגיטלי" %}
+                    📱 דיגיטלי:
+                    {% else %}
+                    ❓ {{ fmt.type }}:
+                    {% endif %}
+                    {% if fmt.available %}
+                    ✅ {{ fmt.price }}
+                    {% else %}
+                    ❌ לא זמין
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% if data.image %}
+            <img src="{{ data.image }}" alt="Book cover" style="height: 120px; margin: 8px 0;"><br>
+            {% endif %}
+
+            {% if data.author_name and data.author_link %}
+            🖋️ <a href="{{ data.author_link }}" target="_blank">{{ data.author_name }}</a><br>
+            {% endif %}
+
+            {% if data.description %}
+            <p style="font-size: 14px; margin-top: 6px; white-space: pre-wrap;">{{ data.description | safe }}</p>
+            {% endif %}
+            {% elif data.suggestions %}
+            ❓ Multiple Matches:<br>
+            <form method="post" action="/select">
+                <input type="hidden" name="book_name" value="{{ name }}">
+                {% for s in data.suggestions %}
+                <label style="display: block; margin-bottom: 10px;">
+                    <input type="radio" name="selected_url" value="{{ s.url }}">
+                    <img src="{{ s.image }}" alt="{{ s.title }}"
+                        style="height: 100px; vertical-align: middle; margin-right: 10px;">
+                    {{ s.title }}
+                </label>
+                {% endfor %}
+                <button type="submit">Select</button>
+            </form>
+            {% else %}
+            ⏳ <span class="status">Book not found yet.</span>
+            {% endif %}
+            <form method="post" action="/remove">
+                <input type="hidden" name="book_name" value="{{ name }}">
+                <button class="btn-remove" type="submit">❌ Remove</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+
+</body>
+
+</html>

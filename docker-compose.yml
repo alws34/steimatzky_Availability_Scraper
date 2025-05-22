@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  bookscraper:
+    build: .
+    container_name: bookscraper
+    ports:
+      - "8091:5000"
+    volumes:
+      - ./books.json:/app/books.json
+    restart: unless-stopped
