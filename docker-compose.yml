@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   bookscraper:
     build: .
@@ -9,3 +7,5 @@ services:
     volumes:
       - ./books.json:/app/books.json
     restart: unless-stopped
+    env_file:
+          - .env

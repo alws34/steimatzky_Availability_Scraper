@@ -3,9 +3,12 @@ from flask import Flask, request, redirect, render_template
 from scraper import check_book, resolve_book_url
 import json, os
 from apscheduler.schedulers.background import BackgroundScheduler
+import requests
 
 app = Flask(__name__)
 BOOKS_FILE = "books.json"
+EMAIL_UTILS_URL = os.environ.get("EMAIL_UTILS_URL")
+
 def load_books():
     if not os.path.exists(BOOKS_FILE):
         return {}
@@ -26,20 +29,6 @@ def save_books(data):
 def index():
     books = load_books()
     return render_template("index.html", books=books)
-
-# @app.route("/add", methods=["POST"])
-# def add_book():
-#     name = request.form["book_name"]
-#     books = load_books()
-#     if name not in books:
-#         books[name] = {
-#             "query": name,
-#             "selected_url": None,
-#             "available_formats": [],
-#             "last_checked": None
-#         }
-#         save_books(books)
-#     return redirect("/")
 
 @app.route("/add", methods=["POST"])
 def add_book():
@@ -122,17 +111,48 @@ def scheduled_check():
     for name, info in books.items():
         if info.get("selected_url"):
             result = check_book(info["selected_url"])
+
+            # Compare digital availability
+            old_formats = {f["type"]: f for f in info.get("available_formats", [])}
+            new_formats = {f["type"]: f for f in result["formats"]}
+            was_digital_available = old_formats.get("דיגיטלי", {}).get("available", False)
+            is_digital_now = new_formats.get("דיגיטלי", {}).get("available", False)
+
             books[name]["available_formats"] = result["formats"]
             books[name]["prices"] = result["prices"]
             books[name]["last_checked"] = result["last_checked"]
-           
-            # Try to assign image from suggestions if missing
-            if "image" not in books[name] or not books[name]["image"]:
+
+            # Send email notification if book just became available digitally
+            if not was_digital_available and is_digital_now and EMAIL_UTILS_URL and not info.get("notified_digital"):
+                try:
+                    payload = {
+                        "service": "book-monitor",
+                        "subject": f"📖 Book Available Digitally: {name}",
+                        "message": (
+                            f"The book \"{name}\" is now available digitally!\n\n"
+                            f"📱 Digital Price: {result['prices'].get('דיגיטלי', 'N/A')}\n"
+                            f"📘 Printed Price: {result['prices'].get('מודפס', 'N/A')}\n"
+                            f"🔗 Link: {info['selected_url']}"
+                        )
+                    }
+                    response = requests.post(
+                        f"{EMAIL_UTILS_URL.rstrip('/')}/send", json=payload, timeout=5
+                    )
+                    response.raise_for_status()
+                    if response.status_code == 200:
+                        books[name]["notified_digital"] = True
+                except Exception as e:
+                    print(f"❌ Failed to send email notification: {e}")
+
+            # Fill missing image
+            if not books[name].get("image"):
                 for s in books[name].get("suggestions", []):
                     if s["url"] == info["selected_url"]:
                         books[name]["image"] = s.get("image")
                         break
+
             updated = True
+
         else:
             search_result = resolve_book_url(info["query"])
             books[name]["last_checked"] = datetime.now().isoformat()
@@ -148,6 +168,9 @@ def scheduled_check():
 
     if updated:
         save_books(books)
+        
+        
+
 # Run background job
 scheduler = BackgroundScheduler()
 scheduler.add_job(scheduled_check, 'interval', hours=1)
