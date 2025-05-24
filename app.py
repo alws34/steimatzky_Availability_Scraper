@@ -28,7 +28,10 @@ def save_books(data):
 @app.route("/")
 def index():
     books = load_books()
+    for book in books.values():
+        format_last_checked(book)
     return render_template("index.html", books=books)
+
 
 @app.route("/add", methods=["POST"])
 def add_book():
@@ -103,6 +106,18 @@ def select_book_url():
         books[name]["description"] = result.get("description")
         save_books(books)
     return redirect("/")
+
+
+def format_last_checked(book):
+    if "last_checked" in book and book["last_checked"]:
+        try:
+            dt = datetime.fromisoformat(book["last_checked"])
+            book["last_checked_formatted"] = dt.strftime("%d/%m/%Y %H:%M")
+        except ValueError:
+            book["last_checked_formatted"] = book["last_checked"]
+    else:
+        book["last_checked_formatted"] = None
+
 
 def scheduled_check():
     books = load_books()

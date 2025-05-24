@@ -119,6 +119,7 @@
                 </li>
                 {% endfor %}
             </ul>
+
             {% if data.image %}
             <img src="{{ data.image }}" alt="Book cover" style="height: 120px; margin: 8px 0;"><br>
             {% endif %}
@@ -126,21 +127,25 @@
             {% if data.author_name and data.author_link %}
             🖋️ <a href="{{ data.author_link }}" target="_blank">{{ data.author_name }}</a><br>
             {% endif %}
-
+            {% if data.last_checked %}
+            {% if data.last_checked_formatted %}
+                <small style="font-size: 12px; color: #aaa;">🕒 Last Checked: {{ data.last_checked_formatted }}</small><br>
+            {% endif %}
+            {% endif %}
             {% if data.description %}
-            <p style="font-size: 14px; margin-top: 6px; white-space: pre-wrap;">{{ data.description | safe }}</p>
+                <p style="font-size: 14px; margin-top: 6px; white-space: pre-wrap;">{{ data.description | safe }}</p>
             {% endif %}
             {% elif data.suggestions %}
-            ❓ Multiple Matches:<br>
-            <form method="post" action="/select">
-                <input type="hidden" name="book_name" value="{{ name }}">
-                {% for s in data.suggestions %}
-                <label style="display: block; margin-bottom: 10px;">
-                    <input type="radio" name="selected_url" value="{{ s.url }}">
-                    <img src="{{ s.image }}" alt="{{ s.title }}"
-                        style="height: 100px; vertical-align: middle; margin-right: 10px;">
-                    {{ s.title }}
-                </label>
+                ❓ Multiple Matches:<br>
+                <form method="post" action="/select">
+                    <input type="hidden" name="book_name" value="{{ name }}">
+                    {% for s in data.suggestions %}
+                    <label style="display: block; margin-bottom: 10px;">
+                        <input type="radio" name="selected_url" value="{{ s.url }}">
+                        <img src="{{ s.image }}" alt="{{ s.title }}"
+                            style="height: 100px; vertical-align: middle; margin-right: 10px;">
+                        {{ s.title }}
+                    </label>
                 {% endfor %}
                 <button type="submit">Select</button>
             </form>
